@@ -1,6 +1,6 @@
 [package]
 name = "ragout_assistant"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Internal/backend crate for the ragout crate"
 license = "MIT"
