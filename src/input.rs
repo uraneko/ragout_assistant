@@ -6,6 +6,33 @@ use crossterm::terminal::enable_raw_mode;
 // you need to create exetrns for C functions from unistd.h
 // Specifically to enable raw mode you need tcgetattr and tcsetattr functions.
 
+///
+/// Enables terminal raw mode and initializes the necessary variables for behaving in the raw mode.
+///
+/// Takes a [`&str`] for the shell prompt (give "" for no prompt) and a bool for the option of running in the terminal alternate screen (give true to run your cli program in alternate screen)
+/// # Errors
+/// Does NOT return errors and never panics
+///
+/// # Example
+///
+/// Basic usage
+///
+/// ```
+/// use ragout::{init, run};
+///
+/// fn main() {
+///     // enter raw mode and initialize necessary variables
+///     // the string literal argument will be the value of the prompt
+///     let (mut sol, mut i, mut h, mut ui) = init("some prompt 🐱 ", true);
+///
+///     'main: loop {
+///         let input = run(&mut i, &mut h, &mut sol, &mut ui);
+///         if !input.is_empty() {
+///             // do some stuff with the user input
+///         }
+///     }
+/// }
+/// ```
 pub fn init(
     prompt: &str,
     alt_screen: bool,
@@ -25,6 +52,8 @@ pub fn init(
     (sol, i, History::new(), String::new())
 }
 
+/// A struct that implements the user input movement and deletion logic inside the terminal raw
+/// mode
 #[derive(Debug)]
 pub struct Input {
     pub values: Vec<char>,
@@ -36,6 +65,7 @@ pub struct Input {
 }
 
 impl Input {
+    /// Creates a new Input instance
     pub fn new(prompt: &str, alt_screen: bool) -> Self {
         Self {
             #[cfg(any(debug_assertions, feature = "debug_logs"))]
@@ -53,6 +83,7 @@ impl Input {
     }
 
     // NOTE: should input.values not be a byte vec instead of a char vec?
+    /// Adds inputted char to Input values at cursor position then increments Input cursor
     pub fn put_char(&mut self, c: char) {
         match self.values.is_empty() {
             true => {
@@ -77,12 +108,14 @@ impl Input {
     // WARN: do NOT touch this Input implementation
     // the fns other than write are not to be touched
 
+    /// Pushs Input values to history, then binds a [`String`] of the Input values to user_input and resets both Input cursor and values
     pub fn cr_lf(&mut self, h: &mut History, user_input: &mut String) {
         h.push(self.values.to_vec());
         *user_input = self.values.drain(..).collect::<String>();
         self.cursor = 0;
     }
 
+    /// Deletes the char behind the cursor position in the Input values
     pub fn backspace(&mut self) {
         if self.values.is_empty() || self.cursor == 0 {
             return;
@@ -93,6 +126,7 @@ impl Input {
         }
     }
 
+    /// Moves the Input cursor one cell to the right
     pub fn to_the_right(&mut self) -> bool {
         if self.values.is_empty() || self.cursor == self.values.len() {
             return false;
@@ -102,6 +136,7 @@ impl Input {
         true
     }
 
+    /// Moves the Input cursor one cell to the left
     pub fn to_the_left(&mut self) -> bool {
         if self.values.is_empty() || self.cursor == 0 {
             return false;
@@ -111,6 +146,7 @@ impl Input {
         true
     }
 
+    /// Moves Input cursor to the position after the last in Input values (which is values.len())
     pub fn to_end(&mut self) -> usize {
         let diff = self.values.len() - self.cursor;
         if diff > 0 {
@@ -120,6 +156,7 @@ impl Input {
         diff
     }
 
+    /// Moves Input cursor to the first position in Input values (which is 0)
     pub fn to_home(&mut self) -> bool {
         if self.cursor == 0 {
             return false;
@@ -129,17 +166,20 @@ impl Input {
         true
     }
 
+    /// Clears all the Input values
     pub fn clear_line(&mut self) {
         self.cursor = 0;
         self.values.clear();
     }
 
+    /// clears the values of Input to the right of Input cursor
     pub fn clear_right(&mut self) {
         for _ in self.cursor..self.values.len() {
             self.values.pop();
         }
     }
 
+    /// clears the values of Input to the left of Input cursor
     pub fn clear_left(&mut self) {
         for _ in 0..self.cursor {
             self.values.remove(0);
@@ -149,6 +189,7 @@ impl Input {
 
     const STOPPERS: [char; 11] = ['/', ' ', '-', '_', ',', '"', '\'', ';', ':', '.', ','];
 
+    /// Syncs Input's internal state to a movement of the user input cursor to the right, stops at the first stopper char
     pub fn to_right_jump(&mut self) {
         if self.cursor == self.values.len() {
             return;
@@ -176,6 +217,7 @@ impl Input {
         }
     }
 
+    /// Syncs Input's internal state to a movement of the user input cursor to the left, stops at the first stopper char
     pub fn to_left_jump(&mut self) {
         if self.cursor == 0 {
             return;
@@ -212,6 +254,7 @@ pub struct History {
 }
 
 impl History {
+    /// Creates a new History instance
     pub fn new() -> Self {
         Self {
             #[cfg(any(debug_assertions, feature = "debug_logs"))]
@@ -227,6 +270,8 @@ impl History {
         }
     }
 
+    /// Binds the value of the previous history entry to the value variable and moves back the
+    /// History cursor by one
     pub fn prev(&mut self, value: &mut Vec<char>) -> bool {
         if self.cursor == 0 {
             return false;
@@ -242,6 +287,8 @@ impl History {
         true
     }
 
+    /// Binds the value of the next history entry to the value variable and moves forward the
+    /// History cursor by one
     pub fn next(&mut self, value: &mut Vec<char>) -> bool {
         if self.cursor == self.values.len() {
             return false;
@@ -257,6 +304,7 @@ impl History {
         true
     }
 
+    /// Pushs a new history entry into the History.values
     pub fn push(&mut self, value: Vec<char>) {
         if value.iter().filter(|c| **c != ' ').count() > 0 && !self.values.contains(&value) {
             self.values.push(value);
@@ -420,11 +468,13 @@ mod test_input {
 }
 
 impl Input {
+    /// Changes the Input prompt value to the provided string
     pub fn overwrite_prompt(&mut self, new_prompt: &str) {
         self.prompt.clear();
         self.prompt.push_str(new_prompt);
     }
 
+    /// Renders the Input prompt followed by the Input values on a clean line
     pub fn write_prompt(&self, sol: &mut StdoutLock) {
         _ = sol.write(b"\x1b[2K");
         _ = sol.write(&[13]);
@@ -433,6 +483,7 @@ impl Input {
         _ = sol.flush();
     }
 
+    /// Syncs the user input cursor displayed in the terminal to the cursor of Input
     pub fn sync_cursor(&self, sol: &mut StdoutLock) {
         _ = sol.write(&[13]);
         // BUG: at every first inputted char of an input line, the cursor was moving forward
