@@ -2,6 +2,14 @@
 name = "ragout_assistant"
 version = "0.1.0"
 edition = "2021"
+description = "Internal/backend crate for the ragout crate"
+license = "MIT"
+repository = "https://github.com/uraneko/ragout_assistant"
+readme = "README.md"
+keywords = ["terminal", "raw_mode", "cli"]
+categories = ["command-line-interface"]
+exclude = ["resources/logs/", "Cargo.lock"]
+# documentation = "https://docs.rs/ragout_assistant"
 
 [dependencies]
 crossterm = "0.28.1"
