@@ -12,7 +12,7 @@ pub use input::{History, Input};
 /// Implemented for Input and History in the ragout crate
 /// # Object Safety
 ///
-/// This trait is [`Object safe`]("https://doc.rust-lang.org/nightly/reference/items/traits.html#object-safety")
+/// This trait is NOT [`Object safe`]("https://doc.rust-lang.org/nightly/reference/items/traits.html#object-safety")
 pub trait DebugLog<E> {
     fn log(&mut self, event: &E);
 
@@ -22,7 +22,7 @@ pub trait DebugLog<E> {
 /// Implements the write method which takes an event and reacts to it.
 /// # Object Safety
 ///
-/// This trait is [`Object safe`]("https://doc.rust-lang.org/nightly/reference/items/traits.html#object-safety")
+/// This trait is NOT [`Object safe`]("https://doc.rust-lang.org/nightly/reference/items/traits.html#object-safety")
 pub trait Writer<E> {
     fn write(&mut self, h: &mut History, ia: &E, sol: &mut StdoutLock<'_>, ui: &mut String);
 }
